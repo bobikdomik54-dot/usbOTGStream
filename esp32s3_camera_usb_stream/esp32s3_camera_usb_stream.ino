@@ -48,10 +48,17 @@ static void cameraHwReset() {
 }
 
 void setup() {
+  Serial0.begin(115200);
   Serial.begin(0);
   delay(500);
 
+  Serial0.println("[camera] Starting init...");
+  Serial0.printf("[camera] PSRAM: %s (%u bytes)\n",
+                 psramFound() ? "found" : "NOT found",
+                 (unsigned)ESP.getPsramSize());
+
   if (!initCamera()) {
+    Serial0.println("[camera] Init failed - check wiring and board settings");
     pinMode(LED_BUILTIN, OUTPUT);
     while (true) {
       digitalWrite(LED_BUILTIN, HIGH);
@@ -60,6 +67,8 @@ void setup() {
       delay(200);
     }
   }
+
+  Serial0.println("[camera] Init OK - streaming");
 }
 
 void loop() {
@@ -109,9 +118,15 @@ static bool initCamera() {
   config.pixel_format = PIXFORMAT_JPEG;
   config.frame_size   = FRAMESIZE_VGA;
   config.jpeg_quality = 10;
-  config.fb_count     = 2;
-  config.fb_location  = CAMERA_FB_IN_PSRAM;
-  config.grab_mode    = CAMERA_GRAB_LATEST;
+  if (psramFound()) {
+    config.fb_count    = 2;
+    config.fb_location = CAMERA_FB_IN_PSRAM;
+    config.grab_mode   = CAMERA_GRAB_LATEST;
+  } else {
+    config.fb_count    = 1;
+    config.fb_location = CAMERA_FB_IN_DRAM;
+    config.grab_mode   = CAMERA_GRAB_WHEN_EMPTY;
+  }
 
   bool ok = false;
   for (int attempt = 0; attempt < CAMERA_INIT_ATTEMPTS && !ok; attempt++) {

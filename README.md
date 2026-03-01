@@ -71,7 +71,16 @@ boards. GPIO assignments:
 | Partition Scheme | Huge APP (3 MB No OTA) |
 
 5. Select the UART COM port and click **Upload**.
-6. After upload, reconnect the board via the **USB OTG** port.
+6. After upload, open the **UART** Serial Monitor at **115200 baud** on the programmer
+   port to see startup diagnostics (`[camera] Init OK - streaming` confirms success during startup).
+7. Reconnect the board via the **USB OTG** port for frame streaming.
+
+> **Note on PSRAM:** The sketch detects PSRAM at runtime. With PSRAM it uses two
+> frame buffers in PSRAM (`CAMERA_FB_IN_PSRAM`, `CAMERA_GRAB_LATEST`) for
+> maximum throughput. Without PSRAM it falls back to one frame buffer in DRAM
+> (`CAMERA_FB_IN_DRAM`, `CAMERA_GRAB_WHEN_EMPTY`), which limits frame rate but
+> prevents a silent crash at startup. Enable PSRAM in **Tools → PSRAM** for best
+> results.
 
 ---
 
