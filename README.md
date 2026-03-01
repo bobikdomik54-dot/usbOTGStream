@@ -48,8 +48,8 @@ boards. GPIO assignments:
 | VSYNC | 38 |
 | HREF | 47 |
 | PCLK | 13 |
-| PWDN | — (not connected) |
-| RESET | — (not connected) |
+| PWDN | — (not connected, or set `PWDN_GPIO_NUM` to the GPIO on your board) |
+| RESET | — (not connected, or set `RESET_GPIO_NUM` to the GPIO on your board) |
 
 ---
 

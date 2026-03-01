@@ -20,13 +20,32 @@
 static const uint8_t FRAME_START[2] = {0xFF, 0xAA};
 static const uint8_t FRAME_END[2]   = {0xFF, 0xBB};
 
-#define CHUNK_SIZE        512
-#define FRAME_INTERVAL_MS 33
+#define CHUNK_SIZE              512
+#define FRAME_INTERVAL_MS       33
+#define CAMERA_INIT_ATTEMPTS    5
+#define CAMERA_INIT_RETRY_MS    200
 
 static unsigned long lastFrameMs = 0;
 
 static bool initCamera();
 static void sendFrame(const uint8_t *buf, uint32_t len);
+
+static void cameraHwReset() {
+  if (PWDN_GPIO_NUM >= 0) {
+    pinMode(PWDN_GPIO_NUM, OUTPUT);
+    digitalWrite(PWDN_GPIO_NUM, HIGH);
+    delay(10);
+    digitalWrite(PWDN_GPIO_NUM, LOW);
+    delay(10);
+  }
+  if (RESET_GPIO_NUM >= 0) {
+    pinMode(RESET_GPIO_NUM, OUTPUT);
+    digitalWrite(RESET_GPIO_NUM, LOW);
+    delay(10);
+    digitalWrite(RESET_GPIO_NUM, HIGH);
+    delay(10);
+  }
+}
 
 void setup() {
   Serial.begin(0);
@@ -86,7 +105,7 @@ static bool initCamera() {
   config.pin_pwdn     = PWDN_GPIO_NUM;
   config.pin_reset    = RESET_GPIO_NUM;
 
-  config.xclk_freq_hz = 20000000;
+  config.xclk_freq_hz = 16000000;
   config.pixel_format = PIXFORMAT_JPEG;
   config.frame_size   = FRAMESIZE_VGA;
   config.jpeg_quality = 10;
@@ -94,7 +113,17 @@ static bool initCamera() {
   config.fb_location  = CAMERA_FB_IN_PSRAM;
   config.grab_mode    = CAMERA_GRAB_LATEST;
 
-  if (esp_camera_init(&config) != ESP_OK) {
+  bool ok = false;
+  for (int attempt = 0; attempt < CAMERA_INIT_ATTEMPTS && !ok; attempt++) {
+    cameraHwReset();
+    if (esp_camera_init(&config) == ESP_OK) {
+      ok = true;
+    } else {
+      esp_camera_deinit();
+      delay(CAMERA_INIT_RETRY_MS);
+    }
+  }
+  if (!ok) {
     return false;
   }
 
